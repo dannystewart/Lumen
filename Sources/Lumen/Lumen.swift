@@ -7,6 +7,15 @@ struct Entrypoint {
     static func main() async throws {
         let arguments = CommandLine.arguments
 
+        if Self.shouldPrintUsage(arguments: arguments) {
+            let console = Terminal()
+            Self.printUsage(to: console)
+
+            let manager = try LumenServiceManager(console: console)
+            try manager.run(action: .status)
+            return
+        }
+
         if Self.shouldRunInstaller(arguments: arguments) {
             let installerOptions = InstallerOptions.from(arguments: arguments)
             let installer = try LumenInstaller(console: Terminal(), options: installerOptions)
@@ -41,6 +50,23 @@ struct Entrypoint {
 
         try await app.execute()
         try await app.asyncShutdown()
+    }
+
+    private static func shouldPrintUsage(arguments: [String]) -> Bool {
+        arguments.count == 1
+    }
+
+    private static func printUsage(to console: Console) {
+        console.print("")
+        console.printHeader("Lumen v\(lumenVersion)")
+        console.printNote("Lumen runs as an installed service. Use one of these commands:")
+        console.print("")
+        console.printCommand("lumen install")
+        console.printCommand("lumen start")
+        console.printCommand("lumen stop")
+        console.printCommand("lumen restart")
+        console.printCommand("lumen status")
+        console.printCommand("lumen uninstall")
     }
 
     private static func shouldRunInstaller(arguments: [String]) -> Bool {
