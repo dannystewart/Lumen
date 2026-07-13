@@ -23,6 +23,10 @@ let package = Package(
                 .product(name: "Vapor", package: "vapor"),
             ],
         ),
+        .testTarget(
+            name: "LumenTests",
+            dependencies: ["Lumen"],
+        ),
     ],
     swiftLanguageModes: [.v6],
 )
