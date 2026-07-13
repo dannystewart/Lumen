@@ -3,14 +3,14 @@ import Testing
 
 @Suite("ExecController")
 struct ExecControllerTests {
-    @Test("Executes commands and captures both output streams")
-    func capturesOutput() async throws {
+    @Test
+    func `Executes commands and captures both output streams`() async throws {
         let response = try await runCommand(
             command: "printf stdout; printf stderr >&2",
             workingDirectory: nil,
             environment: nil,
             timeout: 2,
-            maxOutputBytes: 1_000,
+            maxOutputBytes: 1000,
         )
 
         #expect(response.stdout == "stdout")
@@ -18,8 +18,8 @@ struct ExecControllerTests {
         #expect(response.exitCode == 0)
     }
 
-    @Test("Timeout remains bounded when descendants and the shell ignore termination")
-    func killsTimedOutProcessTree() async throws {
+    @Test
+    func `Timeout remains bounded when descendants and the shell ignore termination`() async throws {
         let clock = ContinuousClock()
         let startedAt = clock.now
 
@@ -29,7 +29,7 @@ struct ExecControllerTests {
                 workingDirectory: nil,
                 environment: nil,
                 timeout: 0.1,
-                maxOutputBytes: 1_000,
+                maxOutputBytes: 1000,
             )
             Issue.record("Expected command to time out")
         } catch let error as ExecError {
@@ -42,8 +42,8 @@ struct ExecControllerTests {
         #expect(startedAt.duration(to: clock.now) < .seconds(3))
     }
 
-    @Test("Caps captured output")
-    func capsOutput() async throws {
+    @Test
+    func `Caps captured output`() async throws {
         let response = try await runCommand(
             command: "yes x | head -c 2000",
             workingDirectory: nil,
@@ -55,8 +55,8 @@ struct ExecControllerTests {
         #expect(response.stdout.hasSuffix("[truncated - output exceeded 100 bytes]"))
     }
 
-    @Test("Returns without waiting for a background descendant that inherits output")
-    func ignoresInheritedOutputDescriptor() async throws {
+    @Test
+    func `Returns without waiting for a background descendant that inherits output`() async throws {
         let clock = ContinuousClock()
         let startedAt = clock.now
 
@@ -65,7 +65,7 @@ struct ExecControllerTests {
             workingDirectory: nil,
             environment: nil,
             timeout: 2,
-            maxOutputBytes: 1_000,
+            maxOutputBytes: 1000,
         )
 
         #expect(response.stdout == "complete")

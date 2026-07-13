@@ -211,10 +211,10 @@ private final class BoundedOutputCapture: @unchecked Sendable {
     let writeHandle: FileHandle
 
     private let maxBytes: Int
-    private let queue = DispatchQueue(label: "dev.dannystewart.lumen.output-capture")
+    private let queue: DispatchQueue = .init(label: "dev.dannystewart.lumen.output-capture")
     private let readDescriptor: Int32
-    private var data = Data()
-    private var source: DispatchSourceRead!
+    private var data: Data = .init()
+    private var source: DispatchSourceRead! = nil
     private var truncated = false
 
     init(maxBytes: Int) throws {
@@ -312,7 +312,8 @@ private func signalProcesses(_ processIDs: [Int32], signal: Int32) {
 }
 
 private func descendantProcessIDs(of rootPID: Int32) -> [Int32] {
-    let captureURL = FileManager.default.temporaryDirectory
+    let captureURL = FileManager.default
+        .temporaryDirectory
         .appendingPathComponent("lumen-ps-\(UUID().uuidString)")
     guard FileManager.default.createFile(atPath: captureURL.path, contents: nil) else { return [] }
     defer { try? FileManager.default.removeItem(at: captureURL) }
@@ -333,8 +334,8 @@ private func descendantProcessIDs(of rootPID: Int32) -> [Int32] {
 
     guard
         let data = try? Data(contentsOf: captureURL),
-        let output = String(data: data, encoding: .utf8)
-    else {
+        let output = String(data: data, encoding: .utf8) else
+    {
         return []
     }
 
@@ -344,8 +345,8 @@ private func descendantProcessIDs(of rootPID: Int32) -> [Int32] {
         guard
             columns.count == 2,
             let processID = Int32(columns[0]),
-            let parentID = Int32(columns[1])
-        else {
+            let parentID = Int32(columns[1]) else
+        {
             continue
         }
         childrenByParent[parentID, default: []].append(processID)
