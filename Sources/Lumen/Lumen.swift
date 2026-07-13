@@ -9,10 +9,9 @@ struct Entrypoint {
 
         if Self.shouldPrintUsage(arguments: arguments) {
             let console = Terminal()
-            Self.printUsage(to: console)
-
             let manager = try LumenServiceManager(console: console)
             try manager.run(action: .status)
+            Self.printCommands(to: console)
             return
         }
 
@@ -26,6 +25,12 @@ struct Entrypoint {
         if Self.shouldRunUninstaller(arguments: arguments) {
             let uninstaller = try LumenUninstaller(console: Terminal())
             try uninstaller.run()
+            return
+        }
+
+        if Self.shouldRunUpdater(arguments: arguments) {
+            let updater = LumenUpdater(console: Terminal())
+            try updater.run()
             return
         }
 
@@ -56,17 +61,18 @@ struct Entrypoint {
         arguments.count == 1
     }
 
-    private static func printUsage(to console: Console) {
-        console.print("")
-        console.printHeader("Lumen v\(lumenVersion)")
-        console.printNote("Lumen runs as an installed service. Use one of these commands:")
+    private static func printCommands(to console: Console) {
+        console.printSection("Available commands")
+        console.printNote("Lumen runs as an installed service. Choose what you want to do:")
         console.print("")
         console.printCommand("lumen install")
+        console.printCommand("lumen update")
         console.printCommand("lumen start")
         console.printCommand("lumen stop")
         console.printCommand("lumen restart")
         console.printCommand("lumen status")
         console.printCommand("lumen uninstall")
+        console.print("")
     }
 
     private static func shouldRunInstaller(arguments: [String]) -> Bool {
@@ -77,6 +83,11 @@ struct Entrypoint {
     private static func shouldRunUninstaller(arguments: [String]) -> Bool {
         guard arguments.count >= 2 else { return false }
         return arguments[1] == "uninstall" || arguments.contains("--uninstall")
+    }
+
+    private static func shouldRunUpdater(arguments: [String]) -> Bool {
+        guard arguments.count >= 2 else { return false }
+        return arguments[1] == "update"
     }
 
     private static func lifecycleAction(arguments: [String]) -> LumenServiceAction? {
@@ -96,6 +107,7 @@ struct Entrypoint {
 
 struct InstallerOptions {
     let allowSudoRequested: Bool
+    let automaticUpgrade: Bool
 
     static func from(arguments: [String]) -> InstallerOptions {
         let normalizedArguments = arguments.dropFirst().filter {
@@ -106,6 +118,7 @@ struct InstallerOptions {
 
         return InstallerOptions(
             allowSudoRequested: allowSudoRequested,
+            automaticUpgrade: normalizedArguments.contains("--automatic-upgrade"),
         )
     }
 }

@@ -38,6 +38,10 @@ struct LumenInstaller {
 
         let existingInstall = InstallLocator().detectExistingInstall(on: platform)
 
+        if self.options.automaticUpgrade, existingInstall == nil {
+            throw Abort(.notFound, reason: "The existing Lumen installation could not be found.")
+        }
+
         let plan: InstallPlan
         if let existingInstall {
             self.console.printSection("Existing installation detected")
@@ -46,7 +50,7 @@ struct LumenInstaller {
             self.console.printLabelValue("Service", value: existingInstall.serviceFilePath)
             self.console.print("")
 
-            if self.console.askBool(prompt: "Keep existing config and reinstall/upgrade?", defaultValue: true) {
+            if self.options.automaticUpgrade || self.console.askBool(prompt: "Keep existing config and reinstall/upgrade?", defaultValue: true) {
                 let existingConfig = ConfigParser.loadExistingConfig(from: existingInstall.serviceFilePath, platform: platform)
                 let preservedAPIKey = existingConfig.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -95,6 +99,9 @@ struct LumenInstaller {
 
         guard canWriteInstall else {
             self.console.printError("Installation requires elevated permissions. Re-run the installer with sudo.")
+            if self.options.automaticUpgrade {
+                throw Abort(.forbidden, reason: "The Lumen update requires elevated permissions.")
+            }
             return
         }
 

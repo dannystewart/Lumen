@@ -4,7 +4,7 @@ Lumen is a lightweight server that enables the Prism app to run CLI commands on 
 
 ## Install
 
-You can install or update Lumen by either cloning the repo or using [Mint](https://github.com/yonaskolb/Mint), a convenient way to install Swift packages without needing to clone repos directly. Lumen will detect and reuse any existing install configurations.
+You can install Lumen by either cloning the repo or using [Mint](https://github.com/yonaskolb/Mint), a convenient way to install Swift packages without needing to clone repos directly. Lumen will detect and reuse any existing install configurations.
 
 To install directly:
 
@@ -30,11 +30,14 @@ The Lumen binary will be located in `~/.local/bin/lumen`. If `lumen` isn’t ava
 Once installed, use:
 
 ```sh
+lumen update
 lumen start
 lumen stop
 lumen restart
 lumen status
 ```
+
+`lumen update` checks the repository's stable version tags, builds the latest release, and reinstalls it while preserving the existing service configuration.
 
 To remove the installed binary and service:
 
