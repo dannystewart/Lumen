@@ -63,11 +63,22 @@ struct ExecController: RouteCollection {
     /// environment to permit them.
     static let escalationCommands: [String] = ["sudo", "su", "pkexec", "doas", "runuser"]
 
+    /// Root-scoped `find` commands are prohibitively expensive and can traverse mounted volumes.
+    /// Match command boundaries rather than arbitrary prose so paths such as `/Users` remain valid.
+    private static let rootFindPattern = #"(?m)(?:^|[\n;&|()])[\t ]*(?:(?:command|env|nice|nohup)[\t ]+)*(?:/(?:usr/)?bin/)?find(?:(?:[\t ]+-(?:H|L|P))|(?:[\t ]+--))*[\t ]+(?:/|"/"|'/')(?=[\t ]|$)"#
+
     /// Returns true if the command contains a privilege escalation call.
     static func containsPrivilegeEscalation(_ command: String) -> Bool {
         self.escalationCommands.contains { cmd in
             command.range(of: "\\b\(NSRegularExpression.escapedPattern(for: cmd))\\b", options: .regularExpression) != nil
         }
+    }
+
+    /// Returns true when a shell command invokes `find` with the filesystem root as its search
+    /// path. This intentionally targets the common command shape rather than acting as a security
+    /// parser; Lumen's model-facing rejection teaches the caller to issue a scoped replacement.
+    static func containsRootFind(_ command: String) -> Bool {
+        command.range(of: self.rootFindPattern, options: .regularExpression) != nil
     }
 
     func boot(routes: RoutesBuilder) throws {
@@ -81,6 +92,13 @@ struct ExecController: RouteCollection {
 
         if Environment.get("LUMEN_ALLOW_SUDO") != "true", Self.containsPrivilegeEscalation(body.command) {
             throw Abort(.forbidden, reason: "Privilege escalation commands (sudo, su, etc.) are blocked. Set LUMEN_ALLOW_SUDO=true to permit.")
+        }
+
+        if Self.containsRootFind(body.command) {
+            throw Abort(
+                .forbidden,
+                reason: "Whole-filesystem searches with `find /` are not allowed because they can be extremely slow and traverse mounted volumes. Search specific likely directories instead (for example, the user's home or project directory), or use an indexed search such as `mdfind` when available.",
+            )
         }
 
         let effectiveTimeout = max(1, min(body.timeout ?? Self.defaultTimeout, Self.maxTimeout))

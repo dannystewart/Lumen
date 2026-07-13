@@ -4,6 +4,37 @@ import Testing
 @Suite("ExecController")
 struct ExecControllerTests {
     @Test
+    func `Rejects root-scoped find commands`() {
+        let commands = [
+            "find / -iname '*.swift'",
+            "find \"/\" -maxdepth 4 -name config.json",
+            "echo ready && /usr/bin/find / -name '*.py'",
+            "printf done; /bin/find '/' -type f",
+            "echo nested | (find -L / -name '*.md')",
+            "command find -- / -type d",
+        ]
+
+        for command in commands {
+            #expect(ExecController.containsRootFind(command), "Expected to reject: \(command)")
+        }
+    }
+
+    @Test
+    func `Allows scoped find commands and mentions of root find`() {
+        let commands = [
+            "find /Users/joe -iname '*.swift'",
+            "find \"/Users/joe/Obsidian/Robot Assistant\" -maxdepth 4 -name '*.py'",
+            "find . -type f",
+            "mdfind -name unifi-protect",
+            "echo 'Do not run find / on this machine'",
+        ]
+
+        for command in commands {
+            #expect(!ExecController.containsRootFind(command), "Expected to allow: \(command)")
+        }
+    }
+
+    @Test
     func `Executes commands and captures both output streams`() async throws {
         let response = try await runCommand(
             command: "printf stdout; printf stderr >&2",
