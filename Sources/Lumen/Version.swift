@@ -6,4 +6,4 @@
 /// - **Patch**: bug fixes with no API surface changes
 ///
 /// Prism enforces a minimum compatible version and will flag nodes running an older release.
-let lumenVersion = "0.3.0"
+let lumenVersion = "0.3.1"
