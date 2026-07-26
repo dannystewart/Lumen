@@ -112,9 +112,9 @@ struct LumenInstaller {
         } else {
             self.console.printSuccess("Lumen installed successfully!")
         }
-        self.printAPIKeyIfNeeded(for: plan)
+        self.printAPIKey(for: plan)
         self.console.print("")
-        self.printPathNoticeIfNeeded(for: plan)
+        self.printPathNotice(for: plan)
         self.printCompletion(for: plan)
     }
 
@@ -217,17 +217,17 @@ struct LumenInstaller {
         let stdoutDirectory = URL(fileURLWithPath: plan.stdoutLogPath).deletingLastPathComponent()
         let stderrDirectory = URL(fileURLWithPath: plan.stderrLogPath).deletingLastPathComponent()
 
-        try self.createDirectoryIfNeeded(binaryDirectory.path)
-        try self.createDirectoryIfNeeded(serviceDirectory.path)
-        try self.createDirectoryIfNeeded(stdoutDirectory.path)
-        try self.createDirectoryIfNeeded(stderrDirectory.path)
+        try self.createDirectory(binaryDirectory.path)
+        try self.createDirectory(serviceDirectory.path)
+        try self.createDirectory(stdoutDirectory.path)
+        try self.createDirectory(stderrDirectory.path)
 
-        try self.setDirectoryPermissionsIfPossible(at: binaryDirectory.path, permissions: 0o755)
-        try self.setDirectoryPermissionsIfPossible(at: serviceDirectory.path, permissions: 0o755)
-        try self.setDirectoryPermissionsIfPossible(at: stdoutDirectory.path, permissions: 0o700)
-        try self.setDirectoryPermissionsIfPossible(at: stderrDirectory.path, permissions: 0o700)
+        try self.setDirectoryPermissions(at: binaryDirectory.path, permissions: 0o755)
+        try self.setDirectoryPermissions(at: serviceDirectory.path, permissions: 0o755)
+        try self.setDirectoryPermissions(at: stdoutDirectory.path, permissions: 0o700)
+        try self.setDirectoryPermissions(at: stderrDirectory.path, permissions: 0o700)
 
-        try self.stopServiceIfNeeded(for: plan)
+        try self.stopService(for: plan)
 
         if self.fileManager.fileExists(atPath: plan.binaryPath) {
             try self.fileManager.removeItem(atPath: plan.binaryPath)
@@ -236,7 +236,7 @@ struct LumenInstaller {
 
         try serviceContents.write(toFile: plan.serviceFilePath, atomically: true, encoding: .utf8)
 
-        try self.setPermissionsIfPossible(for: plan)
+        try self.setPermissions(for: plan)
     }
 
     private func canWriteInstallTargets(for plan: InstallPlan) -> Bool {
@@ -248,7 +248,7 @@ struct LumenInstaller {
         ].allSatisfy { self.fileManager.canWritePath($0) }
     }
 
-    private func setPermissionsIfPossible(for plan: InstallPlan) throws {
+    private func setPermissions(for plan: InstallPlan) throws {
         try? self.fileManager.setAttributes(
             [.posixPermissions: 0o755],
             ofItemAtPath: plan.binaryPath,
@@ -259,14 +259,14 @@ struct LumenInstaller {
         )
     }
 
-    private func setDirectoryPermissionsIfPossible(at path: String, permissions: Int) throws {
+    private func setDirectoryPermissions(at path: String, permissions: Int) throws {
         try? self.fileManager.setAttributes(
             [.posixPermissions: permissions],
             ofItemAtPath: path,
         )
     }
 
-    private func printAPIKeyIfNeeded(for plan: InstallPlan) {
+    private func printAPIKey(for plan: InstallPlan) {
         guard plan.shouldRevealAPIKey else {
             self.console.printSuccess("API key unchanged. Existing Prism connections should continue working.")
             return
@@ -277,7 +277,7 @@ struct LumenInstaller {
         self.console.print(plan.apiKey)
     }
 
-    private func printPathNoticeIfNeeded(for plan: InstallPlan) {
+    private func printPathNotice(for plan: InstallPlan) {
         guard plan.shouldShowPathNotice else { return }
 
         let binaryDirectory = URL(fileURLWithPath: plan.binaryPath).deletingLastPathComponent().path
@@ -299,7 +299,7 @@ struct LumenInstaller {
         }
     }
 
-    private func stopServiceIfNeeded(for plan: InstallPlan) throws {
+    private func stopService(for plan: InstallPlan) throws {
         for command in self.stopCommands(for: plan) {
             try self.runShellCommand(command, allowFailuresMatching: [
                 "could not find service",
@@ -404,7 +404,7 @@ struct LumenInstaller {
         )
     }
 
-    private func createDirectoryIfNeeded(_ path: String) throws {
+    private func createDirectory(_ path: String) throws {
         try self.fileManager.createDirectory(
             at: URL(fileURLWithPath: path),
             withIntermediateDirectories: true,
