@@ -113,7 +113,12 @@ struct LumenServiceManager {
             return
         }
 
-        let plan = self.commands(for: action, install: install, platform: platform)
+        let commandAction: LumenServiceAction = if action == .restart, beforeState.isLoaded == false {
+            .start
+        } else {
+            action
+        }
+        let plan = self.commands(for: commandAction, install: install, platform: platform)
 
         let result = self.runCommands(plan.commands)
 
@@ -154,13 +159,13 @@ struct LumenServiceManager {
 
         case .restart:
             let afterState = self.currentServiceState(for: install, platform: platform)
-            if result.succeeded, afterState.isLoaded {
-                self.printLifecycleSuccess(for: action, install: install)
-            } else if beforeState.isLoaded == false, afterState.isLoaded {
+            if beforeState.isLoaded == false, afterState.isLoaded {
                 self.console.printSuccess("Lumen started successfully.")
                 self.console.print("")
                 self.console.printLabelValue("Service type", value: install.runAsSystemService ? "system" : "user")
                 self.console.printLabelValue("Service", value: install.serviceFilePath)
+            } else if result.succeeded, afterState.isLoaded {
+                self.printLifecycleSuccess(for: action, install: install)
             } else {
                 self.printLifecycleFailure(result, action: action, install: install, platform: platform)
             }
@@ -183,7 +188,7 @@ struct LumenServiceManager {
     private func printLifecycleFailure(
         _ result: LifecycleCommandResult,
         action: LumenServiceAction,
-        install _: ExistingInstall,
+        install: ExistingInstall,
         platform: InstallPlatform,
     ) {
         self.console.printError("Lumen \(action.rawValue) failed.")
@@ -213,6 +218,12 @@ struct LumenServiceManager {
             self.console.print("")
             self.console.printSection("Output")
             self.console.print(result.stdout)
+        }
+
+        if platform == .macOS, result.exitCode == 5 {
+            self.console.print("")
+            self.console.printNote("Lumen already cleared any persisted disabled-service override before retrying launchd.")
+            self.console.printNote("Check the service file with `plutil -lint \(install.serviceFilePath)` and review \(install.stderrLogPath).")
         }
     }
 
@@ -344,7 +355,10 @@ struct LumenServiceManager {
 
         let commands = switch action {
         case .start:
-            ["launchctl bootstrap \(self.targetPrefix(for: install)) \(shellQuote(install.serviceFilePath))"]
+            [
+                "launchctl enable \(target)",
+                "launchctl bootstrap \(self.targetPrefix(for: install)) \(shellQuote(install.serviceFilePath))",
+            ]
 
         case .stop:
             ["launchctl bootout \(target)"]

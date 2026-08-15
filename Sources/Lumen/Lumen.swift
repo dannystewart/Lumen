@@ -1,10 +1,29 @@
 import Vapor
+#if os(Linux)
+    import Glibc
+#else
+    import Darwin
+#endif
 
 // MARK: - Entrypoint
 
 @main
 struct Entrypoint {
-    static func main() async throws {
+    static func main() async {
+        do {
+            try await self.run()
+        } catch {
+            let console = Terminal()
+            console.print("")
+            console.printError("Lumen failed.")
+            console.print("")
+            console.print((error as? Abort)?.reason ?? error.localizedDescription)
+            console.print("")
+            exit(EXIT_FAILURE)
+        }
+    }
+
+    private static func run() async throws {
         let arguments = CommandLine.arguments
 
         if Self.shouldPrintUsage(arguments: arguments) {

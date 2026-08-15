@@ -315,11 +315,13 @@ struct LumenInstaller {
         case .macOS:
             if plan.runAsSystemService {
                 return [
+                    "launchctl enable system/\(plan.platform.serviceLabel)",
                     "launchctl bootstrap system \(shellQuote(plan.serviceFilePath))",
                 ]
             } else {
                 let uid = getuid()
                 return [
+                    "launchctl enable gui/\(uid)/\(plan.platform.serviceLabel)",
                     "launchctl bootstrap gui/\(uid) \(shellQuote(plan.serviceFilePath))",
                 ]
             }
