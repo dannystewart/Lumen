@@ -232,7 +232,7 @@ private final class BoundedOutputCapture: @unchecked Sendable {
     private let queue: DispatchQueue = .init(label: "dev.dannystewart.lumen.output-capture")
     private let readDescriptor: Int32
     private var data: Data = .init()
-    private var source: DispatchSourceRead! = nil
+    private var source: DispatchSourceRead!
     private var truncated = false
 
     init(maxBytes: Int) throws {

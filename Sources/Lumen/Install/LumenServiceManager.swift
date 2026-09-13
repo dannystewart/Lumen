@@ -584,6 +584,6 @@ private struct LiveStatusInfo: Decodable {
 // MARK: - LiveInfoBox
 
 private final class LiveInfoBox: @unchecked Sendable {
-    var info: LiveStatusInfo? = nil
-    var error: Error? = nil
+    var info: LiveStatusInfo?
+    var error: Error?
 }

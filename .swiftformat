@@ -64,7 +64,7 @@
 --max-width none
 --modifier-order
 --never-trailing
---nil-init insert
+--nil-init remove
 --no-space-operators
 --no-wrap-operators
 --non-complex-attributes
