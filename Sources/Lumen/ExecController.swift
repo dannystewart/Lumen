@@ -258,7 +258,7 @@ private final class BoundedOutputCapture: @unchecked Sendable {
         #else
             let flags = Darwin.fcntl(self.readDescriptor, F_GETFL)
             _ = Darwin.fcntl(self.readDescriptor, F_SETFL, flags | O_NONBLOCK)
-        #endif
+        #endif // os(Linux)
 
         self.source = DispatchSource.makeReadSource(fileDescriptor: self.readDescriptor, queue: self.queue)
         self.source.setEventHandler { [weak self] in

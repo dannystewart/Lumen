@@ -1,8 +1,8 @@
 import Foundation
+import Vapor
 #if canImport(FoundationNetworking)
     import FoundationNetworking
 #endif
-import Vapor
 
 // MARK: - LumenServiceAction
 
@@ -460,9 +460,10 @@ struct LumenServiceManager {
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else { return }
-            guard httpResponse.statusCode == 200 else { return }
-            guard let data else { return }
+            guard
+                let httpResponse = response as? HTTPURLResponse,
+                httpResponse.statusCode == 200,
+                let data else { return }
 
             do {
                 box.info = try JSONDecoder().decode(LiveStatusInfo.self, from: data)

@@ -59,7 +59,7 @@ struct InfoResponse: Content {
             "macos"
         #else
             "unknown"
-        #endif
+        #endif // os(Linux)
     }
 
     let hostname: String

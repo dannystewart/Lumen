@@ -192,7 +192,7 @@ enum InstallPlatform {
             .linux
         #else
             .macOS
-        #endif
+        #endif // os(macOS)
     }
 
     var displayName: String {
