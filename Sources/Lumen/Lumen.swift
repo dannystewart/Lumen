@@ -26,10 +26,21 @@ struct Entrypoint {
     private static func run() async throws {
         let arguments = CommandLine.arguments
 
+        if arguments.count >= 2, ["connect", "disconnect"].contains(arguments[1]) {
+            guard arguments.count == 3, arguments[2] == "surfer" else {
+                throw Abort(.badRequest, reason: "Use lumen connect surfer or lumen disconnect surfer.")
+            }
+            try await SurferCommand.run(action: arguments[1], console: Terminal())
+            return
+        }
+
         if Self.shouldPrintUsage(arguments: arguments) {
             let console = Terminal()
             let manager = try LumenServiceManager(console: console)
             try manager.run(action: .status)
+            #if os(macOS)
+                await SurferIntegration.printStatus(to: console)
+            #endif
             Self.printCommands(to: console)
             return
         }
@@ -56,6 +67,9 @@ struct Entrypoint {
         if let lifecycleAction = Self.lifecycleAction(arguments: arguments) {
             let manager = try LumenServiceManager(console: Terminal())
             try manager.run(action: lifecycleAction)
+            #if os(macOS)
+                if lifecycleAction == .status { await SurferIntegration.printStatus(to: Terminal()) }
+            #endif
             return
         }
 
@@ -90,6 +104,8 @@ struct Entrypoint {
         console.printCommand("lumen stop")
         console.printCommand("lumen restart")
         console.printCommand("lumen status")
+        console.printCommand("lumen connect surfer")
+        console.printCommand("lumen disconnect surfer")
         console.printCommand("lumen uninstall")
         console.print("")
     }
@@ -148,6 +164,8 @@ func configure(_ app: Application) throws {
     let port = Int(Environment.get("LUMEN_PORT") ?? "9069") ?? 9069
     app.http.server.configuration.port = port
     app.http.server.configuration.hostname = "0.0.0.0"
+    // Local integration credentials must never follow an upstream redirect off loopback.
+    app.http.client.configuration.redirectConfiguration = .disallow
 
     try routes(app)
 
@@ -162,7 +180,18 @@ func routes(_ app: Application) throws {
 
     // Authenticated routes — require a valid bearer token
     let protected = app.grouped(APIKeyMiddleware())
-    protected.get("info") { _ in InfoResponse.current }
+    protected.get("info") { _ async -> InfoResponse in
+        #if os(macOS)
+            var info = InfoResponse.current
+            info.surfer = await SurferIntegration.status()
+            return info
+        #else
+            return InfoResponse.current
+        #endif
+    }
     try protected.register(collection: ExecController())
     try protected.register(collection: FileController())
+    #if os(macOS)
+        try protected.register(collection: SurferController())
+    #endif
 }

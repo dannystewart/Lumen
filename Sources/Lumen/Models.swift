@@ -65,4 +65,5 @@ struct InfoResponse: Content {
     let hostname: String
     let platform: String
     let version: String
+    var surfer: SurferStatus?
 }
