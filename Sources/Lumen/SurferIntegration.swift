@@ -165,8 +165,9 @@ struct SurferStatus: Content {
             if let body = req.body.data { upstream.body = .bytes(body) }
             do {
                 let result = try await req.application.http.client.shared.execute(upstream, timeout: .seconds(600))
-                // Surfer's current stateless transport returns bounded JSON, not SSE/replay streams.
-                // Fail explicitly if that contract changes rather than buffering an endless stream.
+                // Surfer's current stateless transport returns bounded JSON, not SSE/replay
+                // streams. Fail explicitly if that contract changes rather than buffering an
+                // endless stream.
                 guard result.headers.contentType?.type != "text" || result.headers.contentType?.subType != "event-stream" else {
                     throw Abort(.badGateway, reason: "This relay requires Surfer's JSON MCP transport.")
                 }
@@ -184,4 +185,4 @@ struct SurferStatus: Content {
             }
         }
     }
-#endif
+#endif // os(macOS)

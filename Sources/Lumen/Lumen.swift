@@ -187,7 +187,7 @@ func routes(_ app: Application) throws {
             return info
         #else
             return InfoResponse.current
-        #endif
+        #endif // os(macOS)
     }
     try protected.register(collection: ExecController())
     try protected.register(collection: FileController())

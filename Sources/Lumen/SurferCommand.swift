@@ -35,7 +35,8 @@ enum SurferCommand {
 
             func receive(_ callback: Callback) -> Bool {
                 guard
-                    callback.state == self.state, !self.consumed,
+                    callback.state == self.state,
+                    !self.consumed,
                     callback.error != nil || callback.code?.utf8.count == 43 else { return false }
                 self.consumed = true
                 self.continuation.yield(callback)
@@ -69,7 +70,8 @@ enum SurferCommand {
             callbackApp.on(.POST, "surfer", "callback", body: .collect(maxSize: "2kb")) { req async throws -> HTTPStatus in
                 guard
                     req.headers.first(name: "Origin") == nil,
-                    let host = req.headers.first(name: "Host"), host.hasPrefix("127.0.0.1:"),
+                    let host = req.headers.first(name: "Host"),
+                    host.hasPrefix("127.0.0.1:"),
                     let callback = try? req.content.decode(Callback.self),
                     await inbox.receive(callback) else { throw Abort(.badRequest) }
                 return .noContent
@@ -108,13 +110,17 @@ enum SurferCommand {
                 let body = try JSONSerialization.data(withJSONObject: ["code": code, "code_verifier": verifier])
                 let (data, response) = try await SurferIntegration.request(path: "/connect/token", method: "POST", body: body)
                 guard
-                    response.statusCode == 200, let token = try? JSONDecoder().decode(Token.self, from: data),
-                    token.token_type == "Bearer", token.mcp_endpoint == SurferIntegration.origin + "/mcp",
-                    !token.access_token.isEmpty, token.access_token.utf8.count <= 256 else
+                    response.statusCode == 200,
+                    let token = try? JSONDecoder().decode(Token.self, from: data),
+                    token.token_type == "Bearer",
+                    token.mcp_endpoint == SurferIntegration.origin + "/mcp",
+                    !token.access_token.isEmpty,
+                    token.access_token.utf8.count <= 256 else
                 {
                     throw Abort(.badGateway, reason: "The secure pairing exchange failed. Run lumen connect surfer again.")
                 }
-                // Verify authorization before reporting success; do not print credentials or proofs.
+                // Verify authorization before reporting success; do not print credentials or
+                // proofs.
                 let (statusData, statusResponse) = try await SurferIntegration.request(path: "/connect/status", token: token.access_token)
                 guard
                     statusResponse.statusCode == 200,
@@ -150,7 +156,7 @@ enum SurferCommand {
         private static func urlToken(_ data: Data) -> String {
             data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
         }
-    #endif
+    #endif // os(macOS)
 
     static func run(action: String, console: Console) async throws {
         #if os(macOS)
@@ -164,6 +170,6 @@ enum SurferCommand {
             }
         #else
             throw Abort(.notImplemented, reason: "The Surfer integration is available only on macOS.")
-        #endif
+        #endif // os(macOS)
     }
 }

@@ -19,7 +19,11 @@
             guard manager.fileExists(atPath: self.file.path) else { return nil }
             try self.validate(self.file, directory: false)
             let data = try Data(contentsOf: self.file)
-            guard data.count <= 256, let token = String(data: data, encoding: .utf8), !token.isEmpty else {
+            guard
+                data.count <= 256,
+                let token = String(data: data, encoding: .utf8),
+                !token.isEmpty else
+            {
                 throw Abort(.internalServerError, reason: "The local Surfer credential is invalid. Run lumen connect surfer again.")
             }
             return token
@@ -29,8 +33,8 @@
             let manager = FileManager.default
             try manager.createDirectory(at: self.directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             try self.validate(self.directory, directory: true)
-            // Publish only a complete, already-private file. Concurrent service reads see
-            // either the old credential or the new one, never a partially written token.
+            // Publish only a complete, already-private file. Concurrent service reads see either
+            // the old credential or the new one, never a partially written token.
             let temporary = self.directory.appendingPathComponent(UUID().uuidString)
             guard manager.createFile(atPath: temporary.path, contents: Data(token.utf8), attributes: [.posixPermissions: 0o600]) else {
                 throw Abort(.internalServerError, reason: "The local Surfer credential could not be saved.")
@@ -58,4 +62,4 @@
             }
         }
     }
-#endif
+#endif // os(macOS)
