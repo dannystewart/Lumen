@@ -1,0 +1,31 @@
+disabled_rules:
+  # SwiftFormat owns formatting
+  - opening_brace
+  - closing_brace
+  - leading_whitespace
+  - trailing_whitespace
+  - trailing_newline
+  - trailing_comma
+
+  # Established preferences
+  - line_length
+  - type_name
+  - identifier_name
+  - todo
+  - implicit_optional_initialization
+
+  # Defer broad structural refactoring
+  - file_length
+  - function_body_length
+  - type_body_length
+  - cyclomatic_complexity
+  - nesting
+  - function_parameter_count
+
+excluded:
+  - .build
+  - Build
+  - Packages
+
+check_for_updates: true
+reporter: xcode

@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+# In SwiftFinish's own checkout, use the current sources rather than an installed
+# release. Xcode's incremental build keeps this cheap after the first invocation.
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if { [ -f "$root/SwiftFinish.xcodeproj/project.pbxproj" ] || [ -f "$root/SwiftFinish.xcodeproj/project.xcproj" ]; } && [ -f "$root/SwiftFinishCLI/SwiftFinishCLI.swift" ]; then
+    derived_data="$root/.build/cli"
+    mkdir -p "$derived_data"
+    echo "Building SwiftFinish CLI from this checkout..." >&2
+    if ! /usr/bin/xcodebuild -project "$root/SwiftFinish.xcodeproj" \
+        -scheme SwiftFinishCLI -configuration Release \
+        -derivedDataPath "$derived_data" build > "$derived_data/build.log" 2>&1; then
+        cat "$derived_data/build.log" >&2
+        exit 2
+    fi
+    exec "$derived_data/Build/Products/Release/swiftfinish" "$@"
+fi
+
+candidate=$(command -v swiftfinish || true)
+if [ -n "$candidate" ] && [ ! "$candidate" -ef "$0" ]; then
+    exec "$candidate" "$@"
+fi
+
+for app in /Applications/SwiftFinish.app "$HOME/Applications/SwiftFinish.app"; do
+    cli="$app/Contents/Helpers/swiftfinish"
+    if [ -x "$cli" ]; then
+        exec "$cli" "$@"
+    fi
+done
+
+echo "SwiftFinish CLI not found. Install a SwiftFinish app that includes the CLI in /Applications or ~/Applications, or put swiftfinish on PATH." >&2
+exit 2

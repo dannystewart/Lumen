@@ -31,6 +31,7 @@
 --extension-mark "MARK: - %t + %c"
 --extension-threshold 0
 --file-macro "#file"
+--for-where always
 --fraction-grouping disabled
 --fragment false
 --func-attributes preserve
@@ -75,7 +76,7 @@
 --pattern-let hoist
 --prefer-synthesized-init-for-internal-structs View,ViewModifier
 --preserve-acronyms
---preserve-decls
+--preserve-decls applicationDelegate
 --preserved-property-types Package
 --property-types infer-locals-only
 --ranges spaced
@@ -124,5 +125,5 @@
 --xcode-indentation disabled
 --xctest-symbols
 --yoda-swap always
---disable wrapFunctionBodies,wrapGuardStatementBodies,wrapIfExpressionBodies,wrapIfStatementBodies,wrapPropertyBodies
---enable blankLineAfterSwitchCase,blockComments,markTypes,organizeDeclarations,preferSwiftTesting,privateStateVariables,propertyTypes,singlePropertyPerLine,unusedPrivateDeclarations,wrapEnumCases,wrapMultilineFunctionChains
+--disable privateSwiftUIDynamicProperties,unusedPrivateDeclarations,wrapFunctionBodies,wrapGuardStatementBodies,wrapIfExpressionBodies,wrapIfStatementBodies,wrapPropertyBodies
+--enable blankLineAfterSwitchCase,blockComments,forWhere,markTypes,organizeDeclarations,preferStructSwiftTestingSuites,preferSwiftTesting,propertyTypes,singlePropertyPerLine,wrapEnumCases,wrapMultilineFunctionChains
