@@ -35,7 +35,6 @@ extension ExecError: AbortError {
 struct ExecController: RouteCollection {
     /// Server-enforced maximum timeout in seconds. No command can run longer than this.
     static let maxTimeout: Double = 600
-
     /// Default timeout when the client doesn't specify one.
     static let defaultTimeout: Double = 120
 
@@ -67,6 +66,8 @@ struct ExecController: RouteCollection {
     /// Match command boundaries rather than arbitrary prose so paths such as `/Users` remain valid.
     private static let rootFindPattern = #"(?m)(?:^|[\n;&|()])[\t ]*(?:(?:command|env|nice|nohup)[\t ]+)*(?:/(?:usr/)?bin/)?find(?:(?:[\t ]+-(?:H|L|P))|(?:[\t ]+--))*[\t ]+(?:/|"/"|'/')(?=[\t ]|$)"#
 
+    private let executions: ExecutionRegistry = .init()
+
     /// Returns true if the command contains a privilege escalation call.
     static func containsPrivilegeEscalation(_ command: String) -> Bool {
         self.escalationCommands.contains { cmd in
@@ -83,11 +84,31 @@ struct ExecController: RouteCollection {
 
     func boot(routes: RoutesBuilder) throws {
         routes.post("exec", use: self.execute)
+        routes.post("exec", "run", use: self.executeCancellable)
+        routes.post("exec", "cancel", use: self.cancel)
+    }
+
+    @Sendable
+    func executeCancellable(req: Request) async throws -> ExecResponse {
+        try await self.execute(req: req, requiresExecutionID: true)
+    }
+
+    @Sendable
+    func cancel(req: Request) async throws -> ExecCancellationResponse {
+        let body = try req.content.decode(ExecCancellationRequest.self)
+        return await self.executions.cancel(body.executionID)
     }
 
     @Sendable
     func execute(req: Request) async throws -> ExecResponse {
+        try await self.execute(req: req, requiresExecutionID: false)
+    }
+
+    private func execute(req: Request, requiresExecutionID: Bool) async throws -> ExecResponse {
         let body = try req.content.decode(ExecRequest.self)
+        if requiresExecutionID, body.executionID == nil {
+            throw Abort(.badRequest, reason: "A cancellable execution requires executionID.")
+        }
         req.logger.info("exec: \(body.command)")
 
         if Environment.get("LUMEN_ALLOW_SUDO") != "true", Self.containsPrivilegeEscalation(body.command) {
@@ -107,6 +128,21 @@ struct ExecController: RouteCollection {
             env.filter { !Self.blockedEnvironmentKeys.contains($0.key) }
         }
 
+        if let id = body.executionID {
+            let control = try await self.executions.begin(id)
+            do {
+                let result = try await runCancellableCommand(
+                    command: body.command, workingDirectory: body.workingDirectory,
+                    environment: sanitizedEnv, timeout: effectiveTimeout,
+                    maxOutputBytes: Self.maxOutputBytes, control: control,
+                )
+                await self.executions.finish(id)
+                return result
+            } catch {
+                await self.executions.finish(id)
+                throw error
+            }
+        }
         return try await runCommand(
             command: body.command,
             workingDirectory: body.workingDirectory,
@@ -210,7 +246,7 @@ func runCommand(
     )
 }
 
-private func truncationMarker(maxBytes: Int) -> String {
+func truncationMarker(maxBytes: Int) -> String {
     let limit = ByteCountFormatter.string(fromByteCount: Int64(maxBytes), countStyle: .file)
     return "\n[truncated - output exceeded \(limit)]"
 }
@@ -225,7 +261,7 @@ private func terminateProcessTree(rootPID: Int32, signal: Int32) -> [Int32] {
 // MARK: - BoundedOutputCapture
 
 /// Continuously drains a child-process stream while retaining only a bounded prefix.
-private final class BoundedOutputCapture: @unchecked Sendable {
+final class BoundedOutputCapture: @unchecked Sendable {
     let writeHandle: FileHandle
 
     private let maxBytes: Int
@@ -251,6 +287,13 @@ private final class BoundedOutputCapture: @unchecked Sendable {
         self.maxBytes = max(0, maxBytes)
         self.readDescriptor = descriptors[0]
         self.writeHandle = FileHandle(fileDescriptor: descriptors[1], closeOnDealloc: true)
+        for descriptor in descriptors {
+            #if os(Linux)
+                _ = Glibc.fcntl(descriptor, F_SETFD, FD_CLOEXEC)
+            #else
+                _ = Darwin.fcntl(descriptor, F_SETFD, FD_CLOEXEC)
+            #endif
+        }
 
         #if os(Linux)
             let flags = Glibc.fcntl(self.readDescriptor, F_GETFL)

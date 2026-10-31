@@ -4,6 +4,7 @@ import Vapor
 // MARK: - ExecRequest
 
 struct ExecRequest: Content {
+    var executionID: UUID?
     let command: String
     let workingDirectory: String?
     let environment: [String: String]?
@@ -16,6 +17,21 @@ struct ExecResponse: Content {
     let stdout: String
     let stderr: String
     let exitCode: Int
+    var cancelled: Bool = false
+    var terminationConfirmed: Bool = true
+}
+
+// MARK: - ExecCancellationRequest
+
+struct ExecCancellationRequest: Content {
+    let executionID: UUID
+}
+
+// MARK: - ExecCancellationResponse
+
+struct ExecCancellationResponse: Content {
+    let executionID: UUID
+    let state: String
 }
 
 // MARK: - HealthResponse

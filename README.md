@@ -47,6 +47,29 @@ To remove the installed binary and service:
 lumen uninstall
 ```
 
+## Interruptible command execution
+
+Authenticated clients can use `POST /exec/run` with an `executionID` (UUID), `command`, and the
+existing optional directory, environment, and timeout fields. Duplicate live/recent IDs are rejected. This
+dedicated route lets native Prism reject older nodes before executing uninterruptible work instead
+of silently falling back to `POST /exec`.
+
+`POST /exec/cancel` accepts `{ "executionID": "..." }` and returns a cancellation **receipt**, not a
+termination acknowledgement. A cancellation arriving before its run prevents that command from
+launching. Completed IDs and pre-launch cancellations are retained for eleven minutes, longer than
+the maximum command/HTTP lifetime. IDs must never be reused.
+
+Commands launched through `/exec/run` have their own process group. Cancellation sends SIGINT,
+then escalates to SIGTERM and SIGKILL if necessary. The original run response includes
+`cancelled: true` only after teardown and confirmation that no live group members remain. Output
+produced before interruption is retained. An unconfirmed outcome returns `terminationConfirmed: false`
+and `exitCode: -1`, retaining partial output rather than claiming termination. This does not undo
+completed effects or contain work deliberately detached into another process group/session.
+
+The original `/exec` endpoint remains available to other clients; it does not acquire cancellation
+semantics unless they supply an execution ID. Native Prism and the Lumen node must both be updated
+to use the interruptible flow. No new credentials or server configuration are needed.
+
 ## Surfer integration (macOS)
 
 Run `lumen connect surfer` as your desktop user (not with sudo). It detects and opens Surfer,
