@@ -308,6 +308,38 @@ struct LumenInstaller {
                 "not loaded",
             ])
         }
+
+        if plan.platform == .macOS {
+            try self.waitForServiceRemoval(for: plan)
+        }
+    }
+
+    private func waitForServiceRemoval(for plan: InstallPlan) throws {
+        let domain = plan.runAsSystemService ? "system" : "gui/\(getuid())"
+        let target = "\(domain)/\(plan.platform.serviceLabel)"
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(15))
+
+        // bootout returns before launchd finishes removing a running job.
+        // Wait for its registration to disappear, not just for its process to exit.
+        while true {
+            let status = try self.runShellCommand(
+                "launchctl print \(target)",
+                allowFailuresMatching: ["could not find service"],
+            )
+            if status != 0 {
+                return
+            }
+
+            guard clock.now < deadline else {
+                throw Abort(
+                    .internalServerError,
+                    reason: "Timed out waiting for launchd to remove \(target). The installed binary and service configuration have not been replaced.",
+                )
+            }
+
+            Thread.sleep(forTimeInterval: 0.05)
+        }
     }
 
     private func startCommands(for plan: InstallPlan) -> [String] {
@@ -370,10 +402,11 @@ struct LumenInstaller {
         }
     }
 
+    @discardableResult
     private func runShellCommand(
         _ command: String,
         allowFailuresMatching allowedFailureSubstrings: [String] = [],
-    ) throws {
+    ) throws -> Int32 {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", command]
@@ -391,11 +424,11 @@ struct LumenInstaller {
         let combinedOutput = "\(stdout)\n\(stderr)".lowercased()
 
         guard process.terminationStatus != 0 else {
-            return
+            return process.terminationStatus
         }
 
         if allowedFailureSubstrings.contains(where: { combinedOutput.contains($0) }) {
-            return
+            return process.terminationStatus
         }
 
         throw Abort(
