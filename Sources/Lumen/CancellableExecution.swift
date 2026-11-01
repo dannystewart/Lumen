@@ -149,8 +149,11 @@ func runCancellableCommand(
     let pid: Int32?
     do {
         pid = try control.launch {
-            try spawnCommand(command, workingDirectory: workingDirectory, environment: environment,
-                             stdout: stdout.writeHandle.fileDescriptor, stderr: stderr.writeHandle.fileDescriptor)
+            try spawnCommand(command,
+                             workingDirectory: workingDirectory,
+                             environment: environment,
+                             stdout: stdout.writeHandle.fileDescriptor,
+                             stderr: stderr.writeHandle.fileDescriptor)
         }
     } catch {
         stdout.closeWriteEnd()
@@ -184,7 +187,9 @@ func runCancellableCommand(
             stdout: output.text + (output.truncated ? truncationMarker(maxBytes: maxOutputBytes) : ""),
             stderr: errors.text + (errors.truncated ? truncationMarker(maxBytes: maxOutputBytes) : "")
                 + "\nProcess termination could not be confirmed. Do not repeat the command.",
-            exitCode: -1, cancelled: false, terminationConfirmed: false,
+            exitCode: -1,
+            cancelled: false,
+            terminationConfirmed: false,
         )
     }
     if timedOut.value { throw ExecError.timeout(timeout) }
@@ -194,7 +199,8 @@ func runCancellableCommand(
     return ExecResponse(
         stdout: output.text + (output.truncated ? truncationMarker(maxBytes: maxOutputBytes) : ""),
         stderr: errors.text + (errors.truncated ? truncationMarker(maxBytes: maxOutputBytes) : ""),
-        exitCode: exitCode, cancelled: completion.cancelled,
+        exitCode: exitCode,
+        cancelled: completion.cancelled,
     )
 }
 
@@ -223,7 +229,7 @@ private func spawnCommand(_ command: String, workingDirectory: String?, environm
     #else
         var actions: posix_spawn_file_actions_t?
         var attributes: posix_spawnattr_t?
-    #endif
+    #endif // os(Linux)
     try checkSpawn(posix_spawn_file_actions_init(&actions))
     defer { posix_spawn_file_actions_destroy(&actions) }
     try checkSpawn(posix_spawnattr_init(&attributes))
@@ -264,8 +270,8 @@ private func interruptProcessGroup(_ pid: Int32) async -> Bool {
         try? await Task.sleep(for: .milliseconds(250))
         if await processGroupIsEmpty(pid) == true { return true }
     }
-    // SIGKILL cannot be handled, but a process in uninterruptible I/O can take time to exit.
-    // Keep the outcome honest rather than acknowledge a still-live process as terminated.
+    // SIGKILL cannot be handled, but a process in uninterruptible I/O can take time to exit. Keep
+    // the outcome honest rather than acknowledge a still-live process as terminated.
     return await processGroupIsEmpty(pid) == true
 }
 
@@ -282,7 +288,10 @@ private func processGroupIsEmpty(_ pid: Int32) async -> Bool? {
                 try process.run()
                 let data = output.fileHandleForReading.readDataToEndOfFile()
                 process.waitUntilExit()
-                guard process.terminationStatus == 0, let text = String(data: data, encoding: .utf8) else {
+                guard
+                    process.terminationStatus == 0,
+                    let text = String(data: data, encoding: .utf8) else
+                {
                     continuation.resume(returning: nil)
                     return
                 }

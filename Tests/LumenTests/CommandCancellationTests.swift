@@ -47,8 +47,12 @@ struct CommandCancellationTests {
         let operation = Task {
             do {
                 let response = try await runCancellableCommand(
-                    command: "/bin/sh -c \(quote(child)) & wait", workingDirectory: nil,
-                    environment: nil, timeout: 10, maxOutputBytes: 1000, control: control,
+                    command: "/bin/sh -c \(quote(child)) & wait",
+                    workingDirectory: nil,
+                    environment: nil,
+                    timeout: 10,
+                    maxOutputBytes: 1000,
+                    control: control,
                 )
                 readiness.fail()
                 return response

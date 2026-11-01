@@ -35,6 +35,7 @@ extension ExecError: AbortError {
 struct ExecController: RouteCollection {
     /// Server-enforced maximum timeout in seconds. No command can run longer than this.
     static let maxTimeout: Double = 600
+
     /// Default timeout when the client doesn't specify one.
     static let defaultTimeout: Double = 120
 
@@ -132,9 +133,12 @@ struct ExecController: RouteCollection {
             let control = try await self.executions.begin(id)
             do {
                 let result = try await runCancellableCommand(
-                    command: body.command, workingDirectory: body.workingDirectory,
-                    environment: sanitizedEnv, timeout: effectiveTimeout,
-                    maxOutputBytes: Self.maxOutputBytes, control: control,
+                    command: body.command,
+                    workingDirectory: body.workingDirectory,
+                    environment: sanitizedEnv,
+                    timeout: effectiveTimeout,
+                    maxOutputBytes: Self.maxOutputBytes,
+                    control: control,
                 )
                 await self.executions.finish(id)
                 return result

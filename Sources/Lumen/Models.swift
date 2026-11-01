@@ -59,10 +59,8 @@ struct InfoResponse: Content {
         let rawHostname = ProcessInfo.processInfo.hostName
         let suffixes = [".local", ".lan", ".home"]
 
-        for suffix in suffixes {
-            if rawHostname.lowercased().hasSuffix(suffix) {
-                return String(rawHostname.dropLast(suffix.count))
-            }
+        for suffix in suffixes where rawHostname.lowercased().hasSuffix(suffix) {
+            return String(rawHostname.dropLast(suffix.count))
         }
 
         return rawHostname

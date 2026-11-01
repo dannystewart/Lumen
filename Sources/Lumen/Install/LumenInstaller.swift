@@ -320,8 +320,8 @@ struct LumenInstaller {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: .seconds(15))
 
-        // bootout returns before launchd finishes removing a running job.
-        // Wait for its registration to disappear, not just for its process to exit.
+        // bootout returns before launchd finishes removing a running job. Wait for its registration
+        // to disappear, not just for its process to exit.
         while true {
             let status = try self.runShellCommand(
                 "launchctl print \(target)",
